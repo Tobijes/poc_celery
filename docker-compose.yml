@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+ api:
+    build: ./api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rabbitmq
+      - minio
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET_NAME: mybucket
+      CELERY_BROKER_URL: amqp://guest@rabbitmq:5672//
+      CELERY_RESULT_BACKEND: rpc://
+
+#  worker:
+#     build: ./worker
+#     depends_on:
+#       - rabbitmq
+#     environment:
+#       MINIO_ENDPOINT: minio:9000
+#       MINIO_ACCESS_KEY: minioadmin
+#       MINIO_SECRET_KEY: minioadmin
+#       MINIO_BUCKET_NAME: mybucket
+#       CELERY_BROKER_URL: amqp://guest@rabbitmq:5672//
+#       CELERY_RESULT_BACKEND: rpc://
+
+ rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+
+ minio:
+    image: "minio/minio"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address :9001
+
+ flower:
+    image: mher/flower
+    ports:
+      - "5555:5555"
+    command: celery --broker=pyamqp://guest@rabbitmq// flower --port=5555
